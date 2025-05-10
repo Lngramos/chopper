@@ -32,8 +32,22 @@ var chatCmd = &cobra.Command{
 		}
 		defer resp.Body.Close()
 
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Println("Response:", string(body))
+		decoder := json.NewDecoder(resp.Body)
+		for {
+			var chunk map[string]interface{}
+			if err := decoder.Decode(&chunk); err == io.EOF {
+				break
+			} else if err != nil {
+				fmt.Println("Decode error:", err)
+				break
+			}
+
+			// Print only the "response" field if it exists
+			if content, ok := chunk["response"].(string); ok {
+				fmt.Print(content) // no newline; model usually ends with \n
+			}
+		}
+		fmt.Println()
 	},
 }
 
