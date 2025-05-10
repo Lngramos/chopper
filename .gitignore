@@ -1,0 +1,26 @@
+/artoo
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+bin/
+pkg/
+
+# Dependency directories (often vendored)
+vendor/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+
+# Environment files
+.env
+EOF
