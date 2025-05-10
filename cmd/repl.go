@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/lngramos/chopper/internal/ollama"
+	"github.com/lngramos/chopper/internal/tools"
 	"github.com/spf13/cobra"
 )
 
@@ -66,6 +68,24 @@ Only return a valid JSON object when calling a tool.`,
 			response, err := client.Chat(replModel, replTemperature, messages)
 			if err != nil {
 				fmt.Println("Error:", err)
+				continue
+			}
+
+			// try to parse tool_call
+			var toolCheck struct {
+				ToolCall *struct {
+					Name      string                 `json:"name"`
+					Arguments map[string]interface{} `json:"arguments"`
+				} `json:"tool_call"`
+			}
+			if err := json.Unmarshal([]byte(response), &toolCheck); err == nil && toolCheck.ToolCall != nil {
+				result, err := tools.CallTool(toolCheck.ToolCall.Name, toolCheck.ToolCall.Arguments)
+				if err != nil {
+					fmt.Println("Tool error:", err)
+				} else {
+					fmt.Println(result)
+					history = append(history, ollama.Message{Role: "assistant", Content: result})
+				}
 				continue
 			}
 

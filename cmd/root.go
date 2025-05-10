@@ -39,5 +39,12 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	replCmd.Flags().StringVarP(&replModel, "model", "m", "qwen3:14b", "Model to use")
+	replCmd.Flags().Float64VarP(&replTemperature, "temperature", "t", 0.7, "Sampling temperature")
+	chatCmd.Flags().StringVarP(&chatModel, "model", "m", "qwen3:14b", "Model to use")
+	chatCmd.Flags().Float64VarP(&chatTemperature, "temperature", "t", 0.7, "Sampling temperature")
+
+	rootCmd.AddCommand(replCmd)
+	rootCmd.AddCommand(chatCmd)
 }

@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/lngramos/chopper/internal/ollama"
+	"github.com/lngramos/chopper/internal/tools"
 	"github.com/spf13/cobra"
 )
 
@@ -50,16 +52,22 @@ Only return a valid JSON object when calling a tool.`,
 			os.Exit(1)
 		}
 
+		var toolCheck struct {
+			ToolCall *struct {
+				Name      string                 `json:"name"`
+				Arguments map[string]interface{} `json:"arguments"`
+			} `json:"tool_call"`
+		}
+		if err := json.Unmarshal([]byte(response), &toolCheck); err == nil && toolCheck.ToolCall != nil {
+			result, err := tools.CallTool(toolCheck.ToolCall.Name, toolCheck.ToolCall.Arguments)
+			if err != nil {
+				fmt.Println("Tool error:", err)
+				os.Exit(1)
+			}
+			fmt.Println(result)
+			return
+		}
+
 		fmt.Println(response)
 	},
-}
-
-func init() {
-	replCmd.Flags().StringVarP(&replModel, "model", "m", "qwen3:14b", "Model to use")
-	replCmd.Flags().Float64VarP(&replTemperature, "temperature", "t", 0.7, "Sampling temperature")
-	chatCmd.Flags().StringVarP(&chatModel, "model", "m", "qwen3:14b", "Model to use")
-	chatCmd.Flags().Float64VarP(&chatTemperature, "temperature", "t", 0.7, "Sampling temperature")
-
-	rootCmd.AddCommand(replCmd)
-	rootCmd.AddCommand(chatCmd)
 }
