@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/lngramos/chopper/internal/ollama"
 	"github.com/lngramos/chopper/internal/tools"
@@ -52,20 +53,32 @@ Only return a valid JSON object when calling a tool.`,
 			os.Exit(1)
 		}
 
-		var toolCheck struct {
-			ToolCall *struct {
-				Name      string                 `json:"name"`
-				Arguments map[string]interface{} `json:"arguments"`
-			} `json:"tool_call"`
-		}
-		if err := json.Unmarshal([]byte(response), &toolCheck); err == nil && toolCheck.ToolCall != nil {
-			result, err := tools.CallTool(toolCheck.ToolCall.Name, toolCheck.ToolCall.Arguments)
-			if err != nil {
-				fmt.Println("Tool error:", err)
-				os.Exit(1)
+		jsonStart := strings.Index(response, "{")
+		if jsonStart >= 0 {
+			jsonPart := response[jsonStart:]
+			var toolCheck ollama.ToolCheck
+			if err := json.Unmarshal([]byte(jsonPart), &toolCheck); err == nil {
+				toolCheck.Debug()
+				if toolCheck.ToolCall != nil {
+					result, err := tools.CallTool(toolCheck.ToolCall.Name, toolCheck.ToolCall.Arguments)
+					if err != nil {
+						fmt.Println("Tool error:", err)
+						os.Exit(1)
+					}
+					fmt.Println(result)
+					return
+				} else if len(toolCheck.ToolCalls) > 0 {
+					for _, call := range toolCheck.ToolCalls {
+						result, err := tools.CallTool(call.Name, call.Arguments)
+						if err != nil {
+							fmt.Printf("Tool error [%s]: %v\n", call.Name, err)
+							continue
+						}
+						fmt.Println(result)
+					}
+					return
+				}
 			}
-			fmt.Println(result)
-			return
 		}
 
 		fmt.Println(response)
