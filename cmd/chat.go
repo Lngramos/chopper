@@ -8,10 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	chatModel       string
-	chatTemperature float64
-)
+var chatModel string
+var chatTemperature float64
 
 var chatCmd = &cobra.Command{
 	Use:   "chat [prompt]",
@@ -21,11 +19,32 @@ var chatCmd = &cobra.Command{
 		prompt := args[0]
 		client := ollama.NewClient("http://localhost:11434")
 
-		history := []ollama.Message{
+		systemMessage := ollama.Message{
+			Role: "system",
+			Content: `You are Chopper, a command-line assistant.
+
+You can call the following tools by replying with a JSON object:
+{
+  "tool_call": {
+    "name": "run",
+    "arguments": {
+      "command": "ls -la"
+    }
+  }
+}
+
+Available tools:
+- run(command: string): Execute a shell command and return output.
+- read_file(path: string): Read contents of a file at the given path.
+Only return a valid JSON object when calling a tool.`,
+		}
+
+		messages := []ollama.Message{
+			systemMessage,
 			{Role: "user", Content: prompt},
 		}
 
-		response, err := client.Chat(chatModel, chatTemperature, history)
+		response, err := client.Chat(chatModel, chatTemperature, messages)
 		if err != nil {
 			fmt.Println("Error:", err)
 			os.Exit(1)
@@ -36,7 +55,11 @@ var chatCmd = &cobra.Command{
 }
 
 func init() {
-	chatCmd.Flags().StringVarP(&chatModel, "model", "m", "mistral", "Model to use")
+	replCmd.Flags().StringVarP(&replModel, "model", "m", "qwen3:14b", "Model to use")
+	replCmd.Flags().Float64VarP(&replTemperature, "temperature", "t", 0.7, "Sampling temperature")
+	chatCmd.Flags().StringVarP(&chatModel, "model", "m", "qwen3:14b", "Model to use")
 	chatCmd.Flags().Float64VarP(&chatTemperature, "temperature", "t", 0.7, "Sampling temperature")
+
+	rootCmd.AddCommand(replCmd)
 	rootCmd.AddCommand(chatCmd)
 }
