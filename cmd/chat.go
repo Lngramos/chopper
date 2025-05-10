@@ -11,6 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var model string
+var temperature float64
+
 var chatCmd = &cobra.Command{
 	Use:   "chat",
 	Short: "Chat with a local LLM via Ollama",
@@ -20,9 +23,10 @@ var chatCmd = &cobra.Command{
 			prompt = args[0]
 		}
 
-		requestBody, _ := json.Marshal(map[string]string{
-			"model":  "qwen3:14b",
-			"prompt": prompt,
+		requestBody, _ := json.Marshal(map[string]interface{}{
+			"model":       model,
+			"prompt":      prompt,
+			"temperature": temperature,
 		})
 
 		resp, err := http.Post("http://localhost:11434/api/generate", "application/json", bytes.NewBuffer(requestBody))
@@ -52,5 +56,8 @@ var chatCmd = &cobra.Command{
 }
 
 func init() {
+	chatCmd.Flags().StringVarP(&model, "model", "m", "mistral", "Model to use (e.g. mistral, llama3)")
+	chatCmd.Flags().Float64VarP(&temperature, "temperature", "t", 0.7, "Sampling temperature (0.0 - 1.0)")
+
 	rootCmd.AddCommand(chatCmd)
 }

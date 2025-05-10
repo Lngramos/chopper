@@ -13,12 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var replModel string
+var replTemperature float64
+
 var replCmd = &cobra.Command{
 	Use:   "repl",
 	Short: "Start an interactive chat session with Ollama",
 	Run: func(cmd *cobra.Command, args []string) {
 		reader := bufio.NewReader(os.Stdin)
-		model := "qwen3:14b"
 
 		fmt.Println("Artoo REPL - Type 'exit' to quit")
 		for {
@@ -33,9 +35,10 @@ var replCmd = &cobra.Command{
 				break
 			}
 
-			requestBody, _ := json.Marshal(map[string]string{
-				"model":  model,
-				"prompt": input,
+			requestBody, _ := json.Marshal(map[string]interface{}{
+				"model":       replModel,
+				"prompt":      input,
+				"temperature": replTemperature,
 			})
 
 			resp, err := http.Post("http://localhost:11434/api/generate", "application/json", bytes.NewBuffer(requestBody))
@@ -65,5 +68,8 @@ var replCmd = &cobra.Command{
 }
 
 func init() {
+	replCmd.Flags().StringVarP(&replModel, "model", "m", "qwen3:14b", "Model to use")
+	replCmd.Flags().Float64VarP(&replTemperature, "temperature", "t", 0.7, "Sampling temperature")
+
 	rootCmd.AddCommand(replCmd)
 }
