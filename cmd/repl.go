@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lngramos/artoo/internal/ollama"
+	"github.com/lngramos/chopper/internal/ollama"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ var replCmd = &cobra.Command{
 		reader := bufio.NewReader(os.Stdin)
 		client := ollama.NewClient("http://localhost:11434")
 
-		fmt.Println("Artoo REPL - Type 'exit' to quit")
+		fmt.Println("Chopper REPL - Type 'exit' to quit")
 		for {
 			fmt.Print(">> ")
 			input, _ := reader.ReadString('\n')

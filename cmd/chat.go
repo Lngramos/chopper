@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lngramos/artoo/internal/ollama"
+	"github.com/lngramos/chopper/internal/ollama"
 	"github.com/spf13/cobra"
 )
 

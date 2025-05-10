@@ -1,4 +1,4 @@
-module github.com/lngramos/artoo
+module github.com/lngramos/chopper
 
 go 1.22.2
 
