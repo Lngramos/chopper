@@ -80,7 +80,8 @@ Only return a valid JSON object when calling a tool.`,
 					toolCheck.Debug()
 
 					if toolCheck.ToolCall != nil {
-						result, err := tools.CallTool(toolCheck.ToolCall.Name, toolCheck.ToolCall.Arguments)
+						result, err := tools.CallTool(toolCheck.ToolCall.Name, toolCheck.ToolCall.Arguments, !unsafeMode)
+
 						if err != nil {
 							fmt.Println("Tool error:", err)
 						} else {
@@ -90,7 +91,7 @@ Only return a valid JSON object when calling a tool.`,
 						continue
 					} else if len(toolCheck.ToolCalls) > 0 {
 						for _, call := range toolCheck.ToolCalls {
-							result, err := tools.CallTool(call.Name, call.Arguments)
+							result, err := tools.CallTool(call.Name, call.Arguments, !unsafeMode)
 							if err != nil {
 								fmt.Printf("Tool error [%s]: %v\n", call.Name, err)
 								continue

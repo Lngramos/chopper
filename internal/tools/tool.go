@@ -1,7 +1,8 @@
 package tools
 
 import (
-	"errors"
+	"fmt"
+	"strings"
 )
 
 type Tool interface {
@@ -20,18 +21,21 @@ func Get(name string) (Tool, bool) {
 	return t, ok
 }
 
-func CallTool(name string, args map[string]interface{}) (string, error) {
+func CallTool(name string, args map[string]interface{}, safeMode bool) (string, error) {
+	// If safe mode is on, confirm before running sensitive tools
+	if safeMode && name == "run" {
+		fmt.Printf("⚠️ Confirm execution of tool '%s' with arguments: %v [y/N]: ", name, args)
+		var input string
+		fmt.Scanln(&input)
+		input = strings.ToLower(strings.TrimSpace(input))
+		if input != "y" && input != "yes" {
+			return "Tool execution cancelled.", nil
+		}
+	}
+
 	tool, ok := Get(name)
 	if !ok {
-		return "", errors.New("tool not found: " + name)
+		return "", fmt.Errorf("tool '%s' not found", name)
 	}
 	return tool.Call(args)
-}
-
-func ListTools() []string {
-	names := make([]string, 0, len(registry))
-	for name := range registry {
-		names = append(names, name)
-	}
-	return names
 }

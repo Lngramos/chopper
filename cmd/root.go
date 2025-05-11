@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var unsafeMode bool
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "chopper",
@@ -36,10 +38,10 @@ func init() {
 	// will be global for your application.
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.chopper.yaml)")
+	rootCmd.PersistentFlags().BoolVar(&unsafeMode, "unsafe", false, "Disable safe mode (no confirmation for tool execution)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-
 	replCmd.Flags().StringVarP(&replModel, "model", "m", "qwen3:14b", "Model to use")
 	replCmd.Flags().Float64VarP(&replTemperature, "temperature", "t", 0.7, "Sampling temperature")
 	chatCmd.Flags().StringVarP(&chatModel, "model", "m", "qwen3:14b", "Model to use")
