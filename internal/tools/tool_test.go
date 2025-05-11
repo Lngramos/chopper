@@ -1,13 +1,15 @@
 package tools
 
 import (
+	"bytes"
 	"os"
 	"strings"
 	"testing"
 )
 
 func TestCallTool_UnknownTool(t *testing.T) {
-	_, err := CallTool("not_a_tool", map[string]interface{}{}, false)
+	var buf bytes.Buffer
+	err := CallTool("not_a_tool", map[string]interface{}{}, false, &buf)
 	if err == nil {
 		t.Fatal("expected error for unknown tool")
 	}
@@ -21,9 +23,13 @@ func TestCallTool_DispatchReadFile(t *testing.T) {
 	tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
 
-	_, err := CallTool("read_file", map[string]interface{}{"path": tmpFile.Name()}, false)
+	var buf bytes.Buffer
+	err := CallTool("read_file", map[string]interface{}{"path": tmpFile.Name()}, false, &buf)
 	if err != nil {
 		t.Fatalf("expected no error for read_file, got: %v", err)
+	}
+	if !strings.Contains(buf.String(), "test") {
+		t.Errorf("expected file content, got: %s", buf.String())
 	}
 }
 
@@ -33,9 +39,13 @@ func TestCallTool_SafeMode_Confirm(t *testing.T) {
 	restore := mockStdin("y\n")
 	defer restore()
 
-	_, err := CallTool("run", map[string]interface{}{"command": "echo test"}, true)
+	var buf bytes.Buffer
+	err := CallTool("run", map[string]interface{}{"command": "echo test"}, true, &buf)
 	if err != nil {
 		t.Fatalf("expected run to succeed in safe mode with 'yes', got: %v", err)
+	}
+	if !strings.Contains(buf.String(), "test") {
+		t.Errorf("expected 'test' in output, got: %s", buf.String())
 	}
 }
 
@@ -45,12 +55,13 @@ func TestCallTool_SafeMode_Reject(t *testing.T) {
 	restore := mockStdin("n\n")
 	defer restore()
 
-	result, err := CallTool("run", map[string]interface{}{"command": "echo test"}, true)
+	var buf bytes.Buffer
+	err := CallTool("run", map[string]interface{}{"command": "echo test"}, true, &buf)
 	if err != nil {
 		t.Fatalf("expected no error, just cancelled, got: %v", err)
 	}
-	if !strings.Contains(result, "cancelled") {
-		t.Errorf("expected cancellation message, got: %s", result)
+	if !strings.Contains(buf.String(), "cancelled") {
+		t.Errorf("expected cancellation message, got: %s", buf.String())
 	}
 }
 

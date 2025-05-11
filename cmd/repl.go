@@ -12,22 +12,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	replModel       string
-	replTemperature float64
-	history         []llm.Message
-)
+func NewReplCommand(client llm.Client) *cobra.Command {
+	var model string
+	var temperature float64
+	var history []llm.Message
 
-var replCmd = &cobra.Command{
-	Use:   "repl",
-	Short: "Start an interactive chat session with llm",
-	Run: func(cmd *cobra.Command, args []string) {
-		reader := bufio.NewReader(os.Stdin)
-		client := llm.NewOllamaClient("http://localhost:11434")
+	cmd := &cobra.Command{
+		Use:   "repl",
+		Short: "Start an interactive chat session with LLM",
+		Run: func(cmd *cobra.Command, args []string) {
+			reader := bufio.NewReader(os.Stdin)
 
-		systemMessage := llm.Message{
-			Role: "system",
-			Content: `You are Chopper, a command-line assistant.
+			systemMessage := llm.Message{
+				Role: "system",
+				Content: `You are Chopper, a command-line assistant.
 
 You can call the following tools by replying with a JSON object:
 {
@@ -43,70 +41,68 @@ Available tools:
 - run(command: string): Execute a shell command and return output.
 - read_file(path: string): Read contents of a file at the given path.
 Only return a valid JSON object when calling a tool.`,
-		}
-
-		fmt.Println("Chopper REPL - Type 'exit' to quit")
-		for {
-			fmt.Print(">> ")
-			input, _ := reader.ReadString('\n')
-			input = strings.TrimSpace(input)
-
-			if input == "" {
-				continue
-			} else if input == "exit" {
-				fmt.Println("Goodbye.")
-				break
 			}
 
-			history = append(history, llm.Message{Role: "user", Content: input})
+			fmt.Println("Chopper REPL - Type 'exit' to quit")
+			for {
+				fmt.Print(">> ")
+				input, _ := reader.ReadString('\n')
+				input = strings.TrimSpace(input)
 
-			fmt.Println("Sending request to llm with:")
-			fmt.Printf("Model: %s, Temp: %.2f\n", replModel, replTemperature)
-			fmt.Printf("History length: %d\n", len(history))
+				if input == "" {
+					continue
+				} else if input == "exit" {
+					fmt.Println("Goodbye.")
+					break
+				}
 
-			messages := append([]llm.Message{systemMessage}, history...)
-			response, err := client.Chat(replModel, replTemperature, messages)
-			if err != nil {
-				fmt.Println("Error:", err)
-				continue
-			}
+				history = append(history, llm.Message{Role: "user", Content: input})
 
-			// Try to extract the JSON block from the response
-			jsonStart := strings.Index(response, "{")
-			if jsonStart >= 0 {
-				jsonPart := response[jsonStart:]
-				var toolCheck llm.ToolCheck
-				if err := json.Unmarshal([]byte(jsonPart), &toolCheck); err == nil {
-					toolCheck.Debug()
+				fmt.Println("Sending request to LLM with:")
+				fmt.Printf("Model: %s, Temp: %.2f\n", model, temperature)
+				fmt.Printf("History length: %d\n", len(history))
 
-					if toolCheck.ToolCall != nil {
-						result, err := tools.CallTool(toolCheck.ToolCall.Name, toolCheck.ToolCall.Arguments, !unsafeMode)
+				messages := append([]llm.Message{systemMessage}, history...)
+				response, err := client.Chat(model, temperature, messages)
+				if err != nil {
+					fmt.Println("Error:", err)
+					continue
+				}
 
-						if err != nil {
-							fmt.Println("Tool error:", err)
-						} else {
-							fmt.Println(result)
-							history = append(history, llm.Message{Role: "assistant", Content: result})
-						}
-						continue
-					} else if len(toolCheck.ToolCalls) > 0 {
-						for _, call := range toolCheck.ToolCalls {
-							result, err := tools.CallTool(call.Name, call.Arguments, !unsafeMode)
+				jsonStart := strings.Index(response, "{")
+				if jsonStart >= 0 {
+					jsonPart := response[jsonStart:]
+					var toolCheck llm.ToolCheck
+					if err := json.Unmarshal([]byte(jsonPart), &toolCheck); err == nil {
+						toolCheck.Debug()
+
+						if toolCheck.ToolCall != nil {
+							err := tools.CallTool(toolCheck.ToolCall.Name, toolCheck.ToolCall.Arguments, !unsafeMode, os.Stdout)
 							if err != nil {
-								fmt.Printf("Tool error [%s]: %v\n", call.Name, err)
-								continue
+								fmt.Println("Tool error:", err)
 							}
-							fmt.Println(result)
-							history = append(history, llm.Message{Role: "assistant", Content: result})
+							history = append(history, llm.Message{Role: "assistant", Content: ""})
+							continue
+						} else if len(toolCheck.ToolCalls) > 0 {
+							for _, call := range toolCheck.ToolCalls {
+								err := tools.CallTool(call.Name, call.Arguments, !unsafeMode, os.Stdout)
+								if err != nil {
+									fmt.Printf("Tool error [%s]: %v\n", call.Name, err)
+								}
+							}
+							history = append(history, llm.Message{Role: "assistant", Content: ""})
+							continue
 						}
-						continue
 					}
 				}
-			}
 
-			// If no valid tool call was found, just print the full response
-			fmt.Println(response)
-			history = append(history, llm.Message{Role: "assistant", Content: response})
-		}
-	},
+				fmt.Println(response)
+				history = append(history, llm.Message{Role: "assistant", Content: response})
+			}
+		},
+	}
+
+	cmd.Flags().StringVarP(&model, "model", "m", "qwen3:14b", "Model to use")
+	cmd.Flags().Float64VarP(&temperature, "temperature", "t", 0.7, "Sampling temperature")
+	return cmd
 }

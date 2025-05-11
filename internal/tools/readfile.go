@@ -2,6 +2,8 @@ package tools
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"os"
 )
 
@@ -11,19 +13,17 @@ func (t *ReadFileTool) Name() string {
 	return "read_file"
 }
 
-func (t *ReadFileTool) Call(args map[string]interface{}) (string, error) {
+func (t *ReadFileTool) Call(args map[string]interface{}, out io.Writer) error {
 	path, ok := args["path"].(string)
-	if !ok || path == "" {
-		return "", errors.New("missing or invalid 'path' argument")
+	if !ok {
+		return errors.New("missing 'path' argument")
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
-}
 
-func init() {
-	Register(&RunTool{})
-	Register(&ReadFileTool{})
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprint(out, string(content))
+	return err
 }
