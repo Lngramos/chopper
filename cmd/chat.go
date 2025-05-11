@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lngramos/chopper/internal/ollama"
+	"github.com/lngramos/chopper/internal/llm"
 	"github.com/lngramos/chopper/internal/tools"
 	"github.com/spf13/cobra"
 )
@@ -16,13 +16,13 @@ var chatTemperature float64
 
 var chatCmd = &cobra.Command{
 	Use:   "chat [prompt]",
-	Short: "Send a single prompt to Ollama and get a response",
+	Short: "Send a single prompt to llm and get a response",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		prompt := args[0]
-		client := ollama.NewClient("http://localhost:11434")
+		client := llm.NewOllamaClient("http://localhost:11434")
 
-		systemMessage := ollama.Message{
+		systemMessage := llm.Message{
 			Role: "system",
 			Content: `You are Chopper, a command-line assistant.
 
@@ -42,7 +42,7 @@ Available tools:
 Only return a valid JSON object when calling a tool.`,
 		}
 
-		messages := []ollama.Message{
+		messages := []llm.Message{
 			systemMessage,
 			{Role: "user", Content: prompt},
 		}
@@ -56,7 +56,7 @@ Only return a valid JSON object when calling a tool.`,
 		jsonStart := strings.Index(response, "{")
 		if jsonStart >= 0 {
 			jsonPart := response[jsonStart:]
-			var toolCheck ollama.ToolCheck
+			var toolCheck llm.ToolCheck
 			if err := json.Unmarshal([]byte(jsonPart), &toolCheck); err == nil {
 				toolCheck.Debug()
 				if toolCheck.ToolCall != nil {

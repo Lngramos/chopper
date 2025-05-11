@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lngramos/chopper/internal/ollama"
+	"github.com/lngramos/chopper/internal/llm"
 	"github.com/lngramos/chopper/internal/tools"
 	"github.com/spf13/cobra"
 )
@@ -15,17 +15,17 @@ import (
 var (
 	replModel       string
 	replTemperature float64
-	history         []ollama.Message
+	history         []llm.Message
 )
 
 var replCmd = &cobra.Command{
 	Use:   "repl",
-	Short: "Start an interactive chat session with Ollama",
+	Short: "Start an interactive chat session with llm",
 	Run: func(cmd *cobra.Command, args []string) {
 		reader := bufio.NewReader(os.Stdin)
-		client := ollama.NewClient("http://localhost:11434")
+		client := llm.NewOllamaClient("http://localhost:11434")
 
-		systemMessage := ollama.Message{
+		systemMessage := llm.Message{
 			Role: "system",
 			Content: `You are Chopper, a command-line assistant.
 
@@ -58,13 +58,13 @@ Only return a valid JSON object when calling a tool.`,
 				break
 			}
 
-			history = append(history, ollama.Message{Role: "user", Content: input})
+			history = append(history, llm.Message{Role: "user", Content: input})
 
-			fmt.Println("Sending request to Ollama with:")
+			fmt.Println("Sending request to llm with:")
 			fmt.Printf("Model: %s, Temp: %.2f\n", replModel, replTemperature)
 			fmt.Printf("History length: %d\n", len(history))
 
-			messages := append([]ollama.Message{systemMessage}, history...)
+			messages := append([]llm.Message{systemMessage}, history...)
 			response, err := client.Chat(replModel, replTemperature, messages)
 			if err != nil {
 				fmt.Println("Error:", err)
@@ -75,7 +75,7 @@ Only return a valid JSON object when calling a tool.`,
 			jsonStart := strings.Index(response, "{")
 			if jsonStart >= 0 {
 				jsonPart := response[jsonStart:]
-				var toolCheck ollama.ToolCheck
+				var toolCheck llm.ToolCheck
 				if err := json.Unmarshal([]byte(jsonPart), &toolCheck); err == nil {
 					toolCheck.Debug()
 
@@ -86,7 +86,7 @@ Only return a valid JSON object when calling a tool.`,
 							fmt.Println("Tool error:", err)
 						} else {
 							fmt.Println(result)
-							history = append(history, ollama.Message{Role: "assistant", Content: result})
+							history = append(history, llm.Message{Role: "assistant", Content: result})
 						}
 						continue
 					} else if len(toolCheck.ToolCalls) > 0 {
@@ -97,7 +97,7 @@ Only return a valid JSON object when calling a tool.`,
 								continue
 							}
 							fmt.Println(result)
-							history = append(history, ollama.Message{Role: "assistant", Content: result})
+							history = append(history, llm.Message{Role: "assistant", Content: result})
 						}
 						continue
 					}
@@ -106,7 +106,7 @@ Only return a valid JSON object when calling a tool.`,
 
 			// If no valid tool call was found, just print the full response
 			fmt.Println(response)
-			history = append(history, ollama.Message{Role: "assistant", Content: response})
+			history = append(history, llm.Message{Role: "assistant", Content: response})
 		}
 	},
 }
